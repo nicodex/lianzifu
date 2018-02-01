@@ -49,6 +49,16 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         -pedantic
     )
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    target_compile_options(lianzifu PRIVATE
+        /Wall
+        /wd4127
+        /wd4514
+        /wd4548
+        /wd4640
+        /wd4710
+        /wd4711
+        /wd4820
+        )
     target_compile_definitions(lianzifu PRIVATE
         _CRT_SECURE_NO_WARNINGS
         _SCL_SECURE_NO_WARNINGS
