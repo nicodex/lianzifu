@@ -1,0 +1,19 @@
+# build
+bin/[Dd]ebug/
+bin/[Rr]elease/
+bin/lianzifu
+bin/lianzifu.exe
+cmake-build-*/
+msvc80-build-*/
+
+# data
+test/
+
+# CLion
+.idea/
+
+# MSVC
+*.aps
+*.ncb
+*.suo
+*.user
