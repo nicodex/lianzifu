@@ -52,12 +52,20 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     target_compile_options(lianzifu PRIVATE
         /Wall
         /wd4127
+        /wd4365
         /wd4514
         /wd4548
+        /wd4571
+        /wd4623
+        /wd4625
+        /wd4626
         /wd4640
         /wd4710
         /wd4711
+        /wd4774
         /wd4820
+        /wd5026
+        /wd5027
         )
     target_compile_definitions(lianzifu PRIVATE
         _CRT_SECURE_NO_WARNINGS
