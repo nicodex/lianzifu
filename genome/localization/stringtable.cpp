@@ -1618,13 +1618,7 @@ stringtable::pack_col_tree_node(column const& col, bin_table& tab, bool ext) con
 					}
 				}
 			}
-			struct sort_weight {
-				bool operator()(weight_type::value_type const& a, weight_type::value_type const& b) const
-				{
-					return (a.second > b.second);
-				}
-			};
-			std::sort(weight.begin(), weight.end(), sort_weight());
+			std::sort(weight.begin(), weight.end(), pack_col_tree_node_sort_weight());
 
 			// fill the symbol table
 			std::vector<u16> node2sym(tree.size(), 0);

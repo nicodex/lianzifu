@@ -180,6 +180,12 @@ private:
 	void pack_col_fast(column const& col, bin_table& tab) const;
 	void pack_col_lzpb(column const& col, bin_table& tab, bool ext) const;
 	void pack_col_tree_char(column const& col, bin_table& tab, bool ext) const;
+	struct pack_col_tree_node_sort_weight {
+		bool operator()(std::pair<std::size_t, std::size_t> const& a, std::pair<std::size_t, std::size_t> const& b) const
+		{
+			return (a.second > b.second);
+		}
+	};
 	void pack_col_tree_node(column const& col, bin_table& tab, bool ext) const;
 	void pack_col(column const& col, bin_table& tab, compression comp) const;
 private:
