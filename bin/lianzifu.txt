@@ -1,0 +1,90 @@
+
+Usage: lianzifu <command [argument]...>...
+
+  The commands are executed in command line order.
+  Therefore, everything after --exit is ignored.
+
+Commands:
+
+  --version                           print program version
+  --help                              print this help
+  --exit                              exit the program now
+  --clear                             reset string table state
+  --read-ini [ini]                    add prefix/csv from <ini>
+  --read-csv [utf]                    add strings from all csv
+  --save-map [map]                    save [prefix:]id to <map>
+  --save-bin [plt] [ver] [bin] [cmp]  save string table to <bin>
+  --read-map [map]                    add [prefix:]id from <map>
+  --read-bin [bin]                    add csv/strings from <bin>
+  --save-csv                          save strings to all csv
+
+Defaults:
+
+  <ini>  #G3:/ini/loc.ini
+  <utf>  1
+  <map>  #G3:/lianzifu.csv
+  <plt>  x64
+  <ver>  6
+  <bin>  #G3:/data/compiled/localization/w_strings.bin
+  <cmp>  9
+
+Platforms:
+
+  pc    Windows (32-bit)
+  x64   Windows (64-bit)
+  ps3   PlayStation 3
+  ps4   PlayStation 4
+  x360  Xbox 360
+  xone  Xbox One
+
+Map format:
+
+  The map files are used to restore the string identifiers
+  (the binary string table contains only the hash values).
+
+  Map files have to be encoded in UTF-8 (BOM is optional).
+  Every non-empty line contains <[prefix:]id>[|...], where
+  the prefix is optional (used to select the unpacked CSV,
+  defaults to first CSV in loc.ini for unknown id hashes),
+  and everything after | will be ignored on read (hashes).
+
+CSV format:
+
+  The first line defines the case-insensitive column names.
+  The first row contains the case-insensitive string ids or
+  an eight-character, hexadecimal, and case-sensitive hash.
+
+  Without a BOM the encoding is detected based on the first
+  two octets (X,0 = UTF-16LE; 0,X = UTF-16BE; X,X = UTF-8).
+  This extension to the Genome CSV format has been added to
+  simplify the work flow with CSV tools that do not write a
+  BOM and could be disabled with --read-csv 0 if necessary.
+
+  Records are separated with a LINE FEED (U+000A), the NULL
+  (U+0000) is not allowed, and all CARRIAGE RETURN (U+000D)
+  are ignored during read. Record fields are separated with
+  VERTICAL LINE (U+007C), there's no field quote character,
+  leading and trailing white space is not removed, and only
+  the following escape sequences are available:
+    "\a"  COMMERCIAL AT (U+0040)
+    "\n"  LINE FEED (U+000A)
+    "\r"  CARRIAGE RETURN (U+000D)
+    "\\"  REVERSE SOLIDUS (U+005C)
+    "\v"  VERTICAL LINE (U+007C)
+  The latter two are extensions to the Genome CSV format to
+  permit encoding of field separators and escape sequences.
+
+Examples:
+
+  create #G3:/data/compiled/localization/w_strings.bin (x64 v6) from CSVs
+
+    lianzifu --read-ini --read-csv --save-bin
+
+  export #G3:/lianzifu.csv from CSVs in #G3:/ini/loc.ini
+
+    lianzifu --read-ini --read-csv --save-map
+
+  unpack #G3:/data/compiled/localization/w_strings.bin with #G3:/lianzifu.csv
+
+    lianzifu --read-map --read-ini --read-bin --save-csv
+
