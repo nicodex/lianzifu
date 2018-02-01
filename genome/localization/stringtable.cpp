@@ -986,7 +986,7 @@ stringtable::split_csv_line(wide_string const& csv_line)
 void
 stringtable::read_csv(bool utf)
 {
-	string_hash id_hash = hash_name(to_byte_string(std::wstring(L"ID")));
+	string_hash const id_col_name_hash = hash_name(to_byte_string(std::wstring(L"ID")));
 
 	for (src_list::iterator psrc = m_src.begin(); psrc != m_src.end(); ++psrc) {
 		source& src = *psrc;
@@ -1014,7 +1014,7 @@ stringtable::read_csv(bool utf)
 			text_list csv_fld = split_csv_line(csv_rec);
 			for (text_list::const_iterator pfld = ++csv_fld.begin(); pfld != csv_fld.end(); ++pfld) {
 				byte_string col_name;
-				if (!string_convert(*pfld, col_name) || col_name.empty() || (id_hash == hash_name(col_name))) {
+				if (!string_convert(*pfld, col_name) || col_name.empty() || (id_col_name_hash == hash_name(col_name))) {
 					throw std::invalid_argument("invalid csv column name");
 				}
 				std::size_t idx = add_col(col_name);
