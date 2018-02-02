@@ -8,6 +8,7 @@ msvc80-build-*/
 
 # data
 test/
+*.log
 
 # CLion
 .idea/
