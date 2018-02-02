@@ -13,7 +13,10 @@ test/
 .idea/
 
 # MSVC
+.vs/
 *.aps
+*.ilk
 *.ncb
+*.pdb
 *.suo
 *.user
