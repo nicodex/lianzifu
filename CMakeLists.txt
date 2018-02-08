@@ -77,10 +77,4 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
         # 'std::function_name::_Unchecked_iterators::_Deprecate' Call to std::function_name with parameters that may be unsafe - this call relies on the caller to check that the passed values are correct. To disable this warning, use -D_SCL_SECURE_NO_WARNINGS. See documentation on how to use Visual C++ 'Checked Iterators'
         _SCL_SECURE_NO_WARNINGS
     )
-    # Microsoft Visual C++ 2015 supports the required C++11 features, but __cplusplus is still 199711L
-    if(NOT (MSVC_VERSION LESS 1900))
-        target_compile_definitions(lianzifu PRIVATE
-            GENOME_CXX_VERSION=201103L
-        )
-    endif()
 endif()

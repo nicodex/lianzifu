@@ -49,8 +49,12 @@ void init_genome(void);
 // C++ version override/detection
 //
 
-#ifndef  GENOME_CXX_VERSION
-# define GENOME_CXX_VERSION __cplusplus
+#ifndef GENOME_CXX_VERSION
+# if defined(_MSVC_LANG) && (_MSVC_LANG > 199711L) && (199711L == __cplusplus)
+#  define GENOME_CXX_VERSION _MSVC_LANG
+# else
+#  define GENOME_CXX_VERSION __cplusplus
+# endif
 #endif
 #define GENOME_CXX17 (GENOME_CXX_VERSION >= 201703L)
 #define GENOME_CXX14 (GENOME_CXX_VERSION >= 201402L)
