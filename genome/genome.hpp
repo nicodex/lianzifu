@@ -179,10 +179,10 @@ typedef uint64_t u64;
 # if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #  define GENOME_INTEGER_LITTLE_ENDIAN 1
 # endif
-#elif defined(__i386__) || defined(_M_IX86)
-# if !defined(__VOS__)
-#  define GENOME_INTEGER_LITTLE_ENDIAN 1
-# endif
+#elif defined(__x86_64__) || defined(_M_X64)
+# define GENOME_INTEGER_LITTLE_ENDIAN 1
+#elif defined(__i386) || defined(_M_IX86)
+# define GENOME_INTEGER_LITTLE_ENDIAN 1
 #endif
 #ifndef GENOME_INTEGER_BIG_ENDIAN
 # define GENOME_INTEGER_BIG_ENDIAN 0
