@@ -92,12 +92,20 @@ public:
 		delimiter get_delimiter(void) const;
 		bool operator<(symbol const& rhs) const;
 		bool operator==(symbol const& rhs) const;
-		enum limits {
+		enum limits
+		#if (__cplusplus >= 201103L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201103L))
+			: delimiter
+		#endif
+		{
 			max_delimiter = delimiter(delimiter(-1) >> 1)
 		};
 	private:
 		delimiter m_cd;
-		enum bits {
+		enum bits
+		#if (__cplusplus >= 201103L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201103L))
+			: delimiter
+		#endif
+		{
 			delimiter_mask = delimiter(max_delimiter),
 			delimiter_flag = delimiter(~delimiter_mask),
 			char_mask = delimiter(delimiter_mask & (delimiter(-1) >>
