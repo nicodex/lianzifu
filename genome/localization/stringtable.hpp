@@ -80,12 +80,8 @@ public:
 		byte_string name;
 		string_hash name_hash;
 		text_map    rows;  // only non-empty strings
-		column(byte_string const& col_name)
-			: name(col_name)
-			, name_hash(hash_name(name))
-			, rows()
-		{
-		}
+		column(byte_string const& col_name);
+		bool match(byte_string const& filter) const;
 	};
 	typedef std::vector<column> col_list;
 
@@ -100,7 +96,7 @@ public:
 	void save_csv(void);
 	void read_csv(bool utf = false);
 	void save_map(char const* csv_path);
-	void save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, compression comp);
+	void save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, compression comp, byte_string const& filter);
 private:
 	struct bin_header {
 		// do not change the member types and/or order (streamed as u32[9])

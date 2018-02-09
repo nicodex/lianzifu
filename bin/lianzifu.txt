@@ -6,17 +6,17 @@ Usage: lianzifu <command [argument]...>...
 
 Commands:
 
-  --version                           print program version
-  --help                              print this help
-  --exit                              exit the program now
-  --clear                             reset string table state
-  --read-ini [ini]                    add prefix/csv from <ini>
-  --read-csv [utf]                    add strings from all csv
-  --save-map [map]                    save [prefix:]id to <map>
-  --save-bin [plt] [ver] [bin] [cmp]  save string table to <bin>
-  --read-map [map]                    add [prefix:]id from <map>
-  --read-bin [bin]                    add csv/strings from <bin>
-  --save-csv                          save strings to all csv
+  --version                                print program version
+  --help                                   print this help
+  --exit                                   exit the program now
+  --clear                                  reset string table state
+  --read-ini [ini]                         add prefix/csv from <ini>
+  --read-csv [utf]                         add strings from all csv
+  --save-map [map]                         save [prefix:]id to <map>
+  --save-bin [plt] [ver] [bin] [cmp] [flt] save string table to <bin>
+  --read-map [map]                         add [prefix:]id from <map>
+  --read-bin [bin]                         add csv/strings from <bin>
+  --save-csv                               save strings to all csv
 
 Defaults:
 
@@ -27,6 +27,7 @@ Defaults:
   <ver>  6
   <bin>  #G3:/data/compiled/localization/w_strings.bin
   <cmp>  9
+  <flt>  *_Text;*_StageDir
 
 Platforms:
 

@@ -12,11 +12,12 @@ namespace /*{anonymous}*/ {
 
 wchar_t const* const program_name = L"lianzifu";
 wchar_t const* const program_desc = L"Risen 3 string table [un]packer";
-wchar_t const* const program_vers = L"2.0";
+wchar_t const* const program_vers = L"2.1";
 
 char const* const default_ini = "#G3:/ini/loc.ini";
 char const* const default_bin = "#G3:/data/compiled/localization/w_strings.bin";
 char const* const default_map = "#G3:/lianzifu.csv";
+char const* const default_flt = "*_Text;*_StageDir";
 genome::platform const default_plt = genome::platform_x64;
 int const default_ver = 6;
 int const default_cmp = 9;
@@ -71,17 +72,17 @@ print_help(int exit_code)
 	out << std::endl;
 	out << L"Commands:" << std::endl;
 	out << std::endl;
-	out << L"  --version                           print program version" << std::endl;
-	out << L"  --help                              print this help" << std::endl;
-	out << L"  --exit                              exit the program now" << std::endl;
-	out << L"  --clear                             reset string table state" << std::endl;
-	out << L"  --read-ini [ini]                    add prefix/csv from <ini>" << std::endl;
-	out << L"  --read-csv [utf]                    add strings from all csv" << std::endl;
-	out << L"  --save-map [map]                    save [prefix:]id to <map>" << std::endl;
-	out << L"  --save-bin [plt] [ver] [bin] [cmp]  save string table to <bin>" << std::endl;
-	out << L"  --read-map [map]                    add [prefix:]id from <map>" << std::endl;
-	out << L"  --read-bin [bin]                    add csv/strings from <bin>" << std::endl;
-	out << L"  --save-csv                          save strings to all csv" << std::endl;
+	out << L"  --version                                print program version" << std::endl;
+	out << L"  --help                                   print this help" << std::endl;
+	out << L"  --exit                                   exit the program now" << std::endl;
+	out << L"  --clear                                  reset string table state" << std::endl;
+	out << L"  --read-ini [ini]                         add prefix/csv from <ini>" << std::endl;
+	out << L"  --read-csv [utf]                         add strings from all csv" << std::endl;
+	out << L"  --save-map [map]                         save [prefix:]id to <map>" << std::endl;
+	out << L"  --save-bin [plt] [ver] [bin] [cmp] [flt] save string table to <bin>" << std::endl;
+	out << L"  --read-map [map]                         add [prefix:]id from <map>" << std::endl;
+	out << L"  --read-bin [bin]                         add csv/strings from <bin>" << std::endl;
+	out << L"  --save-csv                               save strings to all csv" << std::endl;
 	out << std::endl;
 	out << L"Defaults:" << std::endl;
 	out << std::endl;
@@ -92,6 +93,7 @@ print_help(int exit_code)
 	out << L"  <ver>  " << genome::to_wstring(default_ver) << std::endl;
 	out << L"  <bin>  " << genome::to_wstring(std::string(default_bin)) << std::endl;
 	out << L"  <cmp>  " << genome::to_wstring(default_cmp) << std::endl;
+	out << L"  <flt>  " << genome::to_wstring(std::string(default_flt)) << std::endl;
 	out << std::endl;
 	out << L"Platforms:" << std::endl;
 	out << std::endl;
@@ -263,7 +265,7 @@ main(int argc, char* argv[])
 
 				} else if ("save-bin" == cmd) {
 
-					if (args.size() > 4) {
+					if (args.size() > 5) {
 						throw std::invalid_argument("too many arguments for --" + cmd);
 					}
 					if (args.size() < 1) {
@@ -278,6 +280,9 @@ main(int argc, char* argv[])
 					if (args.size() < 4) {
 						args.push_back(genome::to_string(default_cmp));
 					}
+					if (args.size() < 5) {
+						args.push_back(default_flt);
+					}
 					genome::platform target = genome::platform_from_name(args[0].c_str());
 					if (genome::platform_unknown == target) {
 						throw std::invalid_argument("invalid target platform");
@@ -288,7 +293,7 @@ main(int argc, char* argv[])
 					}
 					int level = atoi(args[3].c_str());
 					if ((level < 0) || (9 < level) || (genome::to_string(level) != args[3])) {
-						throw std::invalid_argument("invalid compression level" + cmd);
+						throw std::invalid_argument("invalid compression level");
 					}
 					genome::localization::stringtable::compression comp =
 						(level <= 0) ? genome::localization::stringtable::compression_none : (
@@ -297,7 +302,11 @@ main(int argc, char* argv[])
 						(level <= 6) ? genome::localization::stringtable::compression_lzex : (
 						(level <= 8) ? genome::localization::stringtable::compression_tree :
 						               genome::localization::stringtable::compression_best))));
-					stb.save_bin(target, genome::u8(version), args[2].c_str(), comp);
+					genome::byte_string filter;
+					if (!genome::string_convert(args[4], filter)) {
+						throw std::invalid_argument("invalid column filter");
+					}
+					stb.save_bin(target, genome::u8(version), args[2].c_str(), comp, filter);
 
 				} else if ("read-map" == cmd) {
 

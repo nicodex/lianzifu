@@ -255,6 +255,67 @@ public:
 } // namespace genome::localization::{anonymous}
 #endif//GENOME_DEBUG_STB_ALLOCATOR
 
+namespace /*{anonymous}*/ {
+
+	// as far as I can tell, the original code uses SHLWAPI.PathMatchSpecA
+	// (no, I'll not try to emulate this API with all the [un]known quirks)
+	bool
+	name_match_mask(byte_char const* name, byte_char const* mask) {
+		while (*name) {
+			switch (*mask) {
+			case byte_code::semicolon:
+				return (false);
+			case byte_code::question_mark:
+				break;
+			case byte_code::asterisk:
+				do {
+					++mask;
+				} while (byte_code::asterisk == *mask);
+				if (!*mask || (byte_code::semicolon == *mask)) {
+					return (true);
+				}
+				while (*name) {
+					if (name_match_mask(name, mask)) {
+						return (true);
+					}
+					++name;
+				}
+				return (false);
+			default:
+				if (!name_traits::eq(*name, *mask)) {
+					return (false);
+				}
+				break;
+			}
+			++name;
+			++mask;
+		}
+		while (byte_code::asterisk == *mask) {
+			++mask;
+		}
+		return (!*mask || (byte_code::semicolon == *mask));
+	}
+
+	bool
+	name_match_spec(byte_char const* name, byte_char const* spec)
+	{
+		while (*spec) {
+			if (name_match_mask(name, spec)) {
+				return (true);
+			}
+			do {
+				++spec;
+				if (!*spec) {
+					return (false);
+				}
+			} while (*spec != byte_code::semicolon);
+			++spec;
+		}
+		return (false);
+	}
+
+} // namespace genome::localization::{anonymous}
+
 //
 // stringtable::bin_header
 //
@@ -473,6 +534,23 @@ void
 stringtable::source::set_modified(filetime const& modified)
 {
 	m_modified = modified;
+}
+
+//
+// stringtable::column
+//
+
+stringtable::column::column(byte_string const& col_name)
+	: name(col_name)
+	, name_hash(hash_name(name))
+	, rows()
+{
+}
+
+bool
+stringtable::column::match(byte_string const& filter) const
+{
+	return (name_match_spec(name.c_str(), filter.c_str()));
 }
 
 //
@@ -1771,10 +1849,10 @@ stringtable::pack_col(column const& col, bin_table& tab, compression comp) const
 }
 
 void
-stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, compression comp)
+stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, compression comp, byte_string const& filter)
 {
 	if (bin_plat == platform_unknown) {
-		bin_plat = platform_pc;
+		bin_plat = platform_x64;
 	}
 	if (bin_vers == 0) {
 		switch (bin_plat) {
@@ -1816,6 +1894,16 @@ stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, comp
 	}
 	std::string fname(bin_path);
 	std::wcout << L"[" << to_wstring(fname) << L"]" << std::endl;
+	std::wcout << L"filter=" << to_wstring(filter) << std::endl;
+	std::vector<col_list::size_type> col_idx;
+	for (col_list::const_iterator pcol = m_col.begin(); pcol != m_col.end(); ++pcol) {
+		if (pcol->match(filter)) {
+			col_idx.push_back(static_cast<col_list::size_type>(pcol - m_col.begin()));
+		}
+	}
+	if (col_idx.empty()) {
+		throw std::invalid_argument("no matching column found");
+	}
 	filesystem::ensure_directories(fname.c_str());
 	ofarchive ofa(fname.c_str(), bin_plat);
 	if (!ofa) {
@@ -1823,11 +1911,11 @@ stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, comp
 	}
 	bin_header hdr(bin_vers);
 	hdr.src_count = static_cast<archive::streamsize>(m_src.size());
-	hdr.col_count = static_cast<archive::streamsize>(m_col.size());
+	hdr.col_count = static_cast<archive::streamsize>(col_idx.size());
 	hdr.row_count = static_cast<archive::streamsize>(m_ids.size());
 	std::vector<bin_source> src_tab; src_tab.reserve(m_src.size());
-	std::vector<archive::streamref> col_str(m_col.size());
-	std::vector<bin_column> col_tab(m_col.size());
+	std::vector<archive::streamref> col_str(col_idx.size());
+	std::vector<bin_column> col_tab(col_idx.size());
 	archive::streamref key_ref;
 	std::vector<string_hash> key_tab; key_tab.reserve(m_ids.size());
 	std::vector<bin_table> str_tab;
@@ -1838,7 +1926,7 @@ stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, comp
 		hdr.write(ona);
 		std::wcout << L"version=" << to_wstring(hdr.version()) << std::endl;
 		std::wcout << L"strings=" << to_wstring(m_ids.size()) << std::endl;
-		std::wcout << L"columns=" << to_wstring(m_col.size()) << std::endl;
+		std::wcout << L"columns=" << to_wstring(col_idx.size()) << L"/" << to_wstring(m_col.size()) << std::endl;
 		// source table
 		hdr.src_table = ona.tellp();
 		for (src_list::const_iterator psrc = m_src.begin(); psrc != m_src.end(); ++psrc) {
@@ -1852,9 +1940,10 @@ stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, comp
 		// column names
 		hdr.col_names = ona.tellp();
 		ona << col_str;
-		for (col_list::const_iterator pcol = m_col.begin(); pcol != m_col.end(); ++pcol) {
-			byte_string const& str = pcol->name;
-			write_ref_string(ona, str, col_str[static_cast<std::vector<archive::streamref>::size_type>(pcol - m_col.begin())], true, archive::streamsize(sizeof(u32)));
+		for (std::size_t i = 0; i < col_idx.size(); ++i) {
+			byte_string const& str = m_col[col_idx[i]].name;
+			archive::streamref& ref = col_str[i];
+			write_ref_string(ona, str, ref, true, archive::streamsize(sizeof(u32)));
 		}
 		// column table
 		hdr.col_table = ona.tellp();
@@ -1871,7 +1960,7 @@ stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, comp
 		// string tables
 		std::size_t empty_tab = std::size_t(-1);
 		for (std::size_t i = 0; i < col_tab.size(); ++i) {
-			column const& col = m_col[i];
+			column const& col = m_col[col_idx[i]];
 			bin_column& bin = col_tab[i];
 			std::wcout << L"column." << to_wstring(i) << L".name=" << to_wstring(col.name) << std::endl;
 			if (col.rows.empty() && (empty_tab != std::size_t(-1))) {
@@ -1912,9 +2001,10 @@ stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, comp
 	}
 	// column names
 	ofa << col_str;
-	for (col_list::const_iterator pcol = m_col.begin(); pcol != m_col.end(); ++pcol) {
+	for (std::size_t i = 0; i < col_idx.size(); ++i) {
+		byte_string const& str = m_col[col_idx[i]].name;
 		archive::streamref ref;
-		write_ref_string(ofa, pcol->name, ref, true, sizeof(u32));
+		write_ref_string(ofa, str, ref, true, archive::streamsize(sizeof(u32)));
 	}
 	// column table
 	ofa.write(&col_tab[0].str_tab.size, hdr.col_count * 4);
