@@ -216,13 +216,13 @@ datetime::to_wstring(bool force_fraction) const GENOME_NOEXCEPT_NOTHROW
 		gmtime(utc, &nanoseconds);
 		if (force_fraction || nanoseconds) {
 			double seconds = static_cast<double>(utc.tm_sec) + static_cast<double>(nanoseconds) / 1000000000.0;
-			std::swprintf(str, sizeof(str) / sizeof(str[0]),
+			swprintf(str, sizeof(str) / sizeof(str[0]),
 				L"%04d-%02d-%02dT%02d:%02d:%012.9f",
 				utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday,
 				utc.tm_hour, utc.tm_min, seconds
 			);
 		} else {
-			std::swprintf(str, sizeof(str) / sizeof(str[0]),
+			swprintf(str, sizeof(str) / sizeof(str[0]),
 				L"%04d-%02d-%02dT%02d:%02d:%02d",
 				utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday,
 				utc.tm_hour, utc.tm_min, utc.tm_sec
@@ -230,7 +230,7 @@ datetime::to_wstring(bool force_fraction) const GENOME_NOEXCEPT_NOTHROW
 		}
 	} else {
 		u64 const t = ticks();
-		std::swprintf(str, sizeof(str) / sizeof(str[0]),
+		swprintf(str, sizeof(str) / sizeof(str[0]),
 			L"[0x%.8" GENOME_CONCAT(L, PRIX32) L"%.8" GENOME_CONCAT(L, PRIX32) L"]",
 			static_cast<u32>(t >> 32),
 			static_cast<u32>(t)

@@ -24,6 +24,7 @@
 
 #include <genome/genome.hpp>
 #include <genome/archive.hpp>
+#include <cwchar>
 #include <string>
 #include <exception>
 
@@ -323,6 +324,17 @@ wide_string to_wide_string(T const& value);
 
 std::string
 get_exception_name(std::exception const& e);
+
+
+//
+// Wrappers
+//
+
+#if defined(__MINGW32__) || defined(_CRT_NON_CONFORMING_SWPRINTFS)
+int swprintf(wchar_t* buffer, std::size_t size, wchar_t const* format, ...);
+#else
+using std::swprintf;
+#endif
 
 } // namespace genome
 

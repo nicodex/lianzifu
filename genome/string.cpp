@@ -23,8 +23,8 @@
 #include <genome/locale.hpp>
 #include <cassert>
 #include <climits>
+#include <cstdarg>
 #include <cstdio>
-#include <cwchar>
 #ifdef __GLIBCXX__
 # include <cxxabi.h>
 #endif
@@ -146,7 +146,7 @@ bool
 string_converter<i8, std::wstring>::operator()(i8 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[8];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId8), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId8), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -166,7 +166,7 @@ bool
 string_converter<i16, std::wstring>::operator()(i16 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[8];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId16), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId16), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -186,7 +186,7 @@ bool
 string_converter<i32, std::wstring>::operator()(i32 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[16];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId32), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId32), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -211,7 +211,7 @@ bool
 string_converter<i64, std::wstring>::operator()(i64 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[32];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId64), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRId64), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -235,7 +235,7 @@ bool
 string_converter<u8, std::wstring>::operator()(u8 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[8];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu8), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu8), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -255,7 +255,7 @@ bool
 string_converter<u16, std::wstring>::operator()(u16 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[8];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu16), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu16), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -275,7 +275,7 @@ bool
 string_converter<u32, std::wstring>::operator()(u32 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[16];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu32), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu32), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -301,7 +301,7 @@ bool
 string_converter<u64, std::wstring>::operator()(u64 const& from, std::wstring& to) const
 {
 	std::wstring::value_type str[32];
-	if (0 >= std::swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu64), from)) {
+	if (0 >= swprintf(str, sizeof(str) / sizeof(str[0]), L"%" GENOME_CONCAT(L, PRIu64), from)) {
 		return (to.clear(), false);
 	}
 	return (to.assign(str), true);
@@ -650,5 +650,27 @@ get_exception_name(std::exception const& e)
 #endif
 	return (name);
 }
+
+//
+// Wrappers
+//
+
+#if defined(__MINGW32__) || defined(_CRT_NON_CONFORMING_SWPRINTFS)
+int
+swprintf(wchar_t* buffer, std::size_t size, wchar_t const* format, ...)
+{
+	int result;
+	va_list vlist;
+	va_start(vlist, format);
+#if defined(__MINGW32__)
+	result = ::_vsnwprintf(buffer, size, format, vlist);
+#else
+	unused_parameter(size);
+	result = ::swprintf(buffer, format, vlist);
+#endif
+	va_end(vlist);
+	return (result);
+}
+#endif
 
 } // namespace genome
