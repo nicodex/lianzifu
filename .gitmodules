@@ -1,0 +1,3 @@
+[submodule "msvc80/sign"]
+	path = msvc80/sign
+	url = https://github.com/nicodex/codesign.git
