@@ -797,10 +797,19 @@ stringtable::read_bin_col(iarchive& bin, bin_header const& hdr, key_list const& 
 				wide_string::size_type max_str = 0;
 				column& col = m_col[col_indices[i]];
 				for (archive::streamsize j = 0; j < hdr.row_count; ++j) {
-					string_hash const& hash = ids[j];
-				//	byte_string const& name = m_ids[hash];
+					string_hash const& key = ids[j];
 					u32 const beg = str_beg[j];
 					if (u32(-1) == beg) {  // empty string
+						// remove existing string (merge)
+						text_map::iterator pos = col.rows.find(key);
+						if (pos != col.rows.end()) {
+							col.rows.erase(pos);
+
+							byte_string name = get_id_name(key);
+							name.push_back(byte_code::percent_sign);
+							name.append(col.name);
+							std::wclog << L";info: [merge] removed " << to_wstring(name) << std::endl;
+						}
 						continue;
 					} else if (beg >= str_seq.size()) {
 						throw std::out_of_range("invalid string sequence index");
@@ -841,10 +850,18 @@ stringtable::read_bin_col(iarchive& bin, bin_header const& hdr, key_list const& 
 					if (max_str < str.size()) {
 						max_str = str.size();
 					}
-					std::pair<text_map::iterator, bool> row = col.rows.insert(std::make_pair(hash, str));
+					std::pair<text_map::iterator, bool> row = col.rows.insert(std::make_pair(key, str));
 					if (!row.second) {
-						//TODO: make text override optional during merge
-						row.first->second = str;
+						// update existing string (merge)
+						wide_string& val = row.first->second;
+						if (val.compare(str) != 0) {
+							val.assign(str);
+
+							byte_string name = get_id_name(key);
+							name.push_back(byte_code::percent_sign);
+							name.append(col.name);
+							std::wclog << L";info: [merge] changed " << to_wstring(name) << std::endl;
+						}
 					}
 				}
 				std::wcout << L"column.data." << to_wstring(i + 1) << L".max_sub=" << to_wstring(max_sub) << std::endl;
@@ -2021,6 +2038,19 @@ stringtable::save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, comp
 		throw std::runtime_error("failed to write binary string table");
 	}
 	std::wcout << std::endl;
+}
+
+byte_string
+stringtable::get_id_name(string_hash const& key) const
+{
+	name_map::const_iterator pos = m_ids.find(key);
+	if (pos != m_ids.end()) {
+		name_map::mapped_type const& name = pos->second;
+		if (!name.empty()) {
+			return (name);
+		}
+	}
+	return (hash_to_string(key));
 }
 
 } // namespace genome::localization

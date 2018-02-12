@@ -97,6 +97,7 @@ public:
 	void read_csv(bool utf = false);
 	void save_map(char const* csv_path);
 	void save_bin(platform bin_plat, u8 bin_vers, char const* bin_path, compression comp, byte_string const& filter);
+	byte_string get_id_name(string_hash const& key) const;
 private:
 	struct bin_header {
 		// do not change the member types and/or order (streamed as u32[9])
