@@ -12,7 +12,7 @@ namespace /*{anonymous}*/ {
 
 wchar_t const* const program_name = L"lianzifu";
 wchar_t const* const program_desc = L"Risen 3 string table [un]packer";
-wchar_t const* const program_vers = L"2.1";
+wchar_t const* const program_vers = L"2.2";
 
 char const* const default_ini = "#G3:/ini/loc.ini";
 char const* const default_bin = "#G3:/data/compiled/localization/w_strings.bin";
