@@ -735,6 +735,8 @@ stringtable::read_bin_ids(iarchive& bin, bin_header const& hdr)
 					id->second = name->second;
 					++cnt;
 				}
+			} else {
+				++cnt;
 			}
 			++id;
 		}
