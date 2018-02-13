@@ -169,6 +169,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Code signing..."
+				CommandLine="CALL &quot;$(SolutionDir)sign\codesign.bat&quot; $(TargetPath)"
 			/>
 		</Configuration>
 	</Configurations>
