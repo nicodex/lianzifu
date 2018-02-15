@@ -1234,15 +1234,20 @@ stringtable::pack_col_none(column const& col, bin_table& tab) const
 		text_map::const_iterator row = col.rows.find(id->first);
 		if (col.rows.end() == row) {
 			tab.add_empty_string();
-		} else {
-			tab.add_new_string();
-			wide_string const& str = row->second;
-			for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
-				u16 const sym = u16(*chr);
-				tab.add_sequence(sym);
-			}
-			tab.add_sequence_end();
+			continue;
 		}
+		wide_string const& str = row->second;
+		if (str.empty()) {
+			tab.add_empty_string();
+			continue;
+		}
+
+		tab.add_new_string();
+		for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
+			u16 const sym = u16(*chr);
+			tab.add_sequence(sym);
+		}
+		tab.add_sequence_end();
 	}
 }
 
@@ -1262,19 +1267,24 @@ stringtable::pack_col_fast(column const& col, bin_table& tab) const
 		text_map::const_iterator row = col.rows.find(id->first);
 		if (col.rows.end() == row) {
 			tab.add_empty_string();
-		} else {
-			tab.add_new_string();
-			wide_string const& str = row->second;
-			for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
-				chr2sym_map::iterator sym = chr2sym.find(*chr);
-				if (chr2sym.end() == sym) {
-					sym = chr2sym.insert(std::make_pair(*chr, tab.get_next_symbol())).first;
-					tab.add_char_symbol(*chr);
-				}
-				tab.add_sequence(sym->second);
-			}
-			tab.add_sequence_end();
+			continue;
 		}
+		wide_string const& str = row->second;
+		if (str.empty()) {
+			tab.add_empty_string();
+			continue;
+		}
+
+		tab.add_new_string();
+		for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
+			chr2sym_map::iterator sym = chr2sym.find(*chr);
+			if (chr2sym.end() == sym) {
+				sym = chr2sym.insert(std::make_pair(*chr, tab.get_next_symbol())).first;
+				tab.add_char_symbol(*chr);
+			}
+			tab.add_sequence(sym->second);
+		}
+		tab.add_sequence_end();
 	}
 }
 
@@ -1310,52 +1320,57 @@ stringtable::pack_col_lzpb(column const& col, bin_table& tab, bool ext) const
 		text_map::const_iterator row = col.rows.find(id->first);
 		if (col.rows.end() == row) {
 			tab.add_empty_string();
-		} else {
-			str_seq.clear();
-			bool str_ext = ext;
-			u16 seq_sym = 0;
-			std::size_t seq_len = 0;
-			wide_string const& str = row->second;
-			for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
-				u32 const key = bin_table::make_link_symbol(*chr, seq_sym);
-				key2sym_map::iterator sym = key2sym.find(key);
-				if (sym != key2sym.end()) {
-					// existing (possibly linked) symbol found
-					seq_sym = sym->second;
-				} else {
-					if (tab.symbols_full()) {
-						// add last found sequence first
-						if (seq_sym) {
-							str_seq.push_back(seq_sym);
-						}
-						// restart with existing (unlinked) symbol
-						seq_sym = key2sym.find(bin_table::make_char_symbol(*chr))->second;
-						seq_len = 0;
-					} else {
-						// add new (linked) symbol
-						str_ext = false;  // no need to search for existing string sequences
-						seq_sym = tab.get_next_symbol();
-						tab.add_symbol(key);
-						key2sym.insert(std::make_pair(key, seq_sym));
-						// stop generating linked symbols (avoid fast growing symbol table)
-						// Even with this method the symbol table is full after 25% of the
-						// strings in Risen 3 (but without it, the table is full after 6%).
-						seq_len = max_sequence_length;
-					}
-				}
-				++seq_len;
-				if (max_sequence_length <= seq_len) {
-					str_seq.push_back(seq_sym);
-					seq_sym = 0;
-					seq_len = 0;
-				}
-			}
-			// add last found sequence first
-			if (seq_sym) {
-				str_seq.push_back(seq_sym);
-			}
-			tab.add_string_sequence(str_seq, str_ext);
+			continue;
 		}
+		wide_string const& str = row->second;
+		if (str.empty()) {
+			tab.add_empty_string();
+			continue;
+		}
+
+		str_seq.clear();
+		bool str_ext = ext;
+		u16 seq_sym = 0;
+		std::size_t seq_len = 0;
+		for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
+			u32 const key = bin_table::make_link_symbol(*chr, seq_sym);
+			key2sym_map::iterator sym = key2sym.find(key);
+			if (sym != key2sym.end()) {
+				// existing (possibly linked) symbol found
+				seq_sym = sym->second;
+			} else {
+				if (tab.symbols_full()) {
+					// add last found sequence first
+					if (seq_sym) {
+						str_seq.push_back(seq_sym);
+					}
+					// restart with existing (unlinked) symbol
+					seq_sym = key2sym.find(bin_table::make_char_symbol(*chr))->second;
+					seq_len = 0;
+				} else {
+					// add new (linked) symbol
+					str_ext = false;  // no need to search for existing string sequences
+					seq_sym = tab.get_next_symbol();
+					tab.add_symbol(key);
+					key2sym.insert(std::make_pair(key, seq_sym));
+					// stop generating linked symbols (avoid fast growing symbol table)
+					// Even with this method the symbol table is full after 25% of the
+					// strings in Risen 3 (but without it, the table is full after 6%).
+					seq_len = max_sequence_length;
+				}
+			}
+			++seq_len;
+			if (max_sequence_length <= seq_len) {
+				str_seq.push_back(seq_sym);
+				seq_sym = 0;
+				seq_len = 0;
+			}
+		}
+		// add last found sequence first
+		if (seq_sym) {
+			str_seq.push_back(seq_sym);
+		}
+		tab.add_string_sequence(str_seq, str_ext);
 	}
 }
 
@@ -1374,7 +1389,7 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 	for (name_map::const_iterator id = m_ids.begin(); id != m_ids.end(); ++id) {
 		text_map::const_iterator row = col.rows.find(id->first);
 		if (row != col.rows.end()) {
-			wide_string const &str = row->second;
+			wide_string const& str = row->second;
 			if (!str.empty()) {
 				tree.append(str);
 			}
@@ -1385,18 +1400,18 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 	// calc weight (suffix frequency) of all non-leaf nodes
 	std::vector<tree_type::position> node_weight(tree.size(), 0);
 	for (tree_type::const_iterator iter = tree.begin(); iter != tree.end(); ++iter) {
-		tree_type::node const &node = *iter;
+		tree_type::node const& node = *iter;
 		if (node.empty()) {
 			// advance all non-root parents
-			for (tree_type::node const *parent = node.parent(); parent && parent->parent(); parent = parent->parent()) {
-				tree_type::position &parent_value = node_weight[parent->index()];
+			for (tree_type::node const* parent = node.parent(); parent && parent->parent(); parent = parent->parent()) {
+				tree_type::position& parent_value = node_weight[parent->index()];
 				tree_type::position const parent_weight = parent_value + 1;
 				if (parent_value < parent_weight) {
 					parent_value = parent_weight;
 				}
 				// advance all non-root suffix links (suffix without the first character)
-				for (tree_type::node const *link = parent->link(); link && link->parent(); link = link->link()) {
-					tree_type::position &link_value = node_weight[link->index()];
+				for (tree_type::node const* link = parent->link(); link && link->parent(); link = link->link()) {
+					tree_type::position& link_value = node_weight[link->index()];
 					tree_type::position const link_weight = link_value + 1;
 					if (link_value < link_weight) {
 						link_value = link_weight;
@@ -1406,15 +1421,14 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 		}
 	}
 
-	std::vector<symbol_info> node_symbol(tree.size(),
-										 std::make_pair(symbol_info::first_type(0), symbol_info::second_type(0)));
+	std::vector<symbol_info> node_symbol(tree.size(), std::make_pair(u16(0), u16(0)));
 
 	// ensure that all used UTF-16 codes are present as unlinked symbols
 	// (this also guarantees that we never reach root while searching for exiting node symbols)
-	for (tree_type::node const *node = tree.root().front(); node; node = node->sibling()) {
-		tree_type::symbol const &sym = tree.symbols()[node->edge().begin()];
+	for (tree_type::node const* node = tree.root().front(); node; node = node->sibling()) {
+		tree_type::symbol const& sym = tree.symbols()[node->edge().begin()];
 		if (sym.is_char()) {
-			symbol_info &info = node_symbol[node->index()];
+			symbol_info& info = node_symbol[node->index()];
 			u32 const key = bin_table::make_char_symbol(sym.get_char());
 			if (key != 0) {  // symbol #0->0 is added in pack_col()
 				info.first = tab.get_next_symbol();
@@ -1433,7 +1447,7 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 			tab.add_empty_string();
 			continue;
 		}
-		wide_string const &str = row->second;
+		wide_string const& str = row->second;
 		if (str.empty()) {
 			tab.add_empty_string();
 			continue;
@@ -1443,16 +1457,16 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 		char_node.clear();
 		char_node.reserve(str.length());
 		{
-			tree_type::node const *prev = &tree.root();
+			tree_type::node const* prev = &tree.root();
 			for (wide_string::const_iterator pos = str.begin(); pos != str.end(); ++pos) {
 				tree_type::position length;
 				wide_string::const_iterator chr = pos;
-				tree_type::node const *node = prev->link();
+				tree_type::node const* node = prev->link();
 				if (node && node->parent()) {
 					// non-root link found (previous suffix without the first character)
 					length = node->length(tree.symbols(), true);
-					wide_string::size_type const pos_len = static_cast<wide_string::size_type>(std::distance(pos,
-																											 str.end()));
+					wide_string::size_type const pos_len = static_cast<wide_string::size_type>(
+						std::distance(pos, str.end()));
 					if (length >= pos_len) {
 						length = pos_len;
 						chr = str.end();
@@ -1474,8 +1488,8 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 					}
 					node = next->second;
 					length = node->length(tree.symbols(), true);
-					wide_string::size_type const chr_len = static_cast<wide_string::size_type>(std::distance(chr,
-																											 str.end()));
+					wide_string::size_type const chr_len = static_cast<wide_string::size_type>(
+						std::distance(chr, str.end()));
 					if (length >= chr_len) {
 						length = chr_len;
 						break;
@@ -1496,17 +1510,19 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 
 		class build_sequence_function {
 			// get rid of MSVC warning C4512: assignment operator could not be generated
-			build_sequence_function &operator=(build_sequence_function const &) { return (*this); }  // = delete
+			build_sequence_function& operator=(build_sequence_function const&) { return (*this); }  // = delete
 		private:
-			tree_type const &tree;
-			std::vector<tree_type::position> const &node_weight;
-			std::vector<symbol_info> &node_symbol;
-			std::vector<char_info> const &char_node;
-			std::vector<u32> &sym_tab;
-			std::vector<u16> &str_seq;
+			tree_type const& tree;
+			std::vector<tree_type::position> const& node_weight;
+			std::vector<symbol_info>& node_symbol;
+			std::vector<char_info> const& char_node;
+			std::vector<u32>& sym_tab;
+			std::vector<u16>& str_seq;
 		private:
-			u16 insert_node_symbol(tree_type::node const &node, tree_type::position length) const {
-				symbol_info &info = node_symbol[node.index()];
+			u16
+			insert_node_symbol(tree_type::node const& node, tree_type::position length) const
+			{
+				symbol_info& info = node_symbol[node.index()];
 				u16 index = info.first;
 				if (info.second >= length) {
 					// symbols already added, resolve symbol links if the node has more
@@ -1542,7 +1558,9 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 				return (index);
 			}
 
-			symbol_info::second_type get_symbol_count(tree_type::node const *node) const {
+			symbol_info::second_type
+			get_symbol_count(tree_type::node const* node) const
+			{
 				symbol_info::second_type count = node_symbol[node->index()].second;
 				while (0 == count) {
 					node = node->parent();
@@ -1552,10 +1570,11 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 			}
 
 			tree_type::position
-			max_char_length(char_info const &info, std::vector<char_info>::difference_type max_len) const {
-				tree_type::position length = static_cast<tree_type::position>(std::min(info.second,
-																					   static_cast<char_info::second_type>(max_len)));
-				tree_type::node const *node = &tree.at(info.first);
+			max_char_length(char_info const& info, std::vector<char_info>::difference_type max_len) const
+			{
+				tree_type::position length = static_cast<tree_type::position>(
+					std::min(info.second, static_cast<char_info::second_type>(max_len)));
+				tree_type::node const* node = &tree.at(info.first);
 				while (length <= node->parent_depth()) {
 					node = node->parent();
 				}
@@ -1570,7 +1589,9 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 				return (length);
 			}
 
-			tree_type::position get_char_rating(char_info const &info, char_info::second_type length) const {
+			tree_type::position
+			get_char_rating(char_info const& info, char_info::second_type length) const
+			{
 				tree_type::position const weight = node_weight[info.first];
 				tree_type::position rating = weight * length;
 				if (rating < weight) {
@@ -1579,8 +1600,11 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 				return (rating);
 			}
 
-			void compress_char_nodes(std::vector<char_info>::const_iterator begin,
-									 std::vector<char_info>::const_iterator end) const {
+			void
+			compress_char_nodes(
+				std::vector<char_info>::const_iterator begin,
+				std::vector<char_info>::const_iterator end) const
+			{
 				std::vector<char_info>::const_iterator best_pos = begin;
 				char_info::second_type best_length = max_char_length(*best_pos, std::distance(best_pos, end));
 				tree_type::position best_rating = get_char_rating(*best_pos, best_length);
@@ -1596,13 +1620,14 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 					}
 				}
 				{
-					tree_type::node const *best_node = &tree.at(best_pos->first);
-					while (best_length <= best_node->parent_depth()) {
-						best_node = best_node->parent();
+					tree_type::node const* node = &tree.at(best_pos->first);
+					while (node->parent_depth() >= best_length) {
+						node = node->parent();
 					}
-					u16 const best_symbol = insert_node_symbol(*best_node, best_length);
-					str_seq[static_cast<std::vector<u16>::size_type>(std::distance(char_node.begin(),
-																				   best_pos))] = best_symbol;
+					u16 const symbol = insert_node_symbol(*node, best_length);
+					std::vector<u16>::size_type const index = static_cast<std::vector<u16>::size_type>(
+						best_pos - char_node.begin());
+					str_seq[index] = symbol;
 				}
 				if (best_pos != begin) {
 					compress_char_nodes(begin, best_pos);
@@ -1615,14 +1640,18 @@ stringtable::pack_col_tree_char(column const& col, bin_table& tab, bool ext) con
 
 		public:
 			build_sequence_function(
-					tree_type const &tree,
-					std::vector<tree_type::position> const &node_weight,
-					std::vector<symbol_info> &node_symbol,
-					std::vector<char_info> const &char_node,
-					std::vector<u32> &sym_tab,
-					std::vector<u16> &str_seq)
-					: tree(tree), node_weight(node_weight), node_symbol(node_symbol), char_node(char_node),
-					  sym_tab(sym_tab), str_seq(str_seq) {
+				tree_type const& tree,
+				std::vector<tree_type::position> const& node_weight,
+				std::vector<symbol_info>& node_symbol,
+				std::vector<char_info> const& char_node,
+				std::vector<u32>& sym_tab,
+				std::vector<u16>& str_seq)
+				: tree(tree)
+				, node_weight(node_weight)
+				, node_symbol(node_symbol)
+				, char_node(char_node)
+				, sym_tab(sym_tab)
+				, str_seq(str_seq) {
 				str_seq.clear();
 				str_seq.insert(str_seq.end(), char_node.size(), u16(0));
 				compress_char_nodes(char_node.begin(), char_node.end());
@@ -1719,19 +1748,29 @@ stringtable::pack_col_tree_node(column const& col, bin_table& tab, bool ext) con
 
 			// fill the symbol table
 			std::vector<u16> node2sym(tree.size(), 0);
-			struct add_node_type {
+			class add_node_type {
+				// get rid of MSVC warning C4512: assignment operator could not be generated
+				add_node_type& operator=(add_node_type const&) { return (*this); }  // = delete
+			private:
 				tree_type const& m_tree;
 				std::vector<u16>& m_node2sym;
 				key2sym_map& m_key2sym;
 				std::vector<u32>& m_table;
-				add_node_type(tree_type const& tree, std::vector<u16>& node2sym, key2sym_map& key2sym, std::vector<u32>& table)
+			public:
+				add_node_type(
+					tree_type const& tree,
+					std::vector<u16>& node2sym,
+					key2sym_map& key2sym,
+					std::vector<u32>& table)
 					: m_tree(tree)
 					, m_node2sym(node2sym)
 					, m_key2sym(key2sym)
 					, m_table(table)
 				{
 				}
-				u16 operator()(std::size_t index) const
+
+				u16
+				operator()(std::size_t index) const
 				{
 					u16 symbol = m_node2sym[index];
 					if (0 == symbol) {
@@ -1754,11 +1793,6 @@ stringtable::pack_col_tree_node(column const& col, bin_table& tab, bool ext) con
 						m_node2sym[index] = symbol;
 					}
 					return (symbol);
-				}
-			private:
-				add_node_type& operator=(add_node_type const&)
-				{
-					return (*this);
 				}
 			} add_node(tree, node2sym, key2sym, tab.sym_tab);
 			// add/complete the unlinked symbols first
@@ -1785,36 +1819,40 @@ stringtable::pack_col_tree_node(column const& col, bin_table& tab, bool ext) con
 		text_map::const_iterator row = col.rows.find(id->first);
 		if (col.rows.end() == row) {
 			tab.add_empty_string();
-		} else {
-			str_seq.clear();
-			u16 seq_sym = 0;
-			std::size_t seq_len = 0;
-			wide_string const& str = row->second;
-			for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
-				u32 const key = bin_table::make_link_symbol(*chr, seq_sym);
-				key2sym_map::iterator sym = key2sym.find(key);
-				if (sym != key2sym.end()) {
-					// existing symbol found
-					seq_sym = sym->second;
-				} else {
-					// add last found sequence first
-					if (seq_sym) {
-						str_seq.push_back(seq_sym);
-					}
-					// restart with unlinked symbol
-					seq_sym = key2sym.find(bin_table::make_char_symbol(*chr))->second;
-					seq_len = 0;
-				}
-				++seq_len;
-			}
-			// add last found sequence first
-			if (seq_sym) {
-				str_seq.push_back(seq_sym);
-			}
-			tab.add_string_sequence(str_seq, ext);
+			continue;
 		}
+		wide_string const& str = row->second;
+		if (str.empty()) {
+			tab.add_empty_string();
+			continue;
+		}
+
+		str_seq.clear();
+		u16 seq_sym = 0;
+		std::size_t seq_len = 0;
+		for (wide_string::const_iterator chr = str.begin(); chr != str.end(); ++chr) {
+			u32 const key = bin_table::make_link_symbol(*chr, seq_sym);
+			key2sym_map::iterator sym = key2sym.find(key);
+			if (sym != key2sym.end()) {
+				// existing symbol found
+				seq_sym = sym->second;
+			} else {
+				// add last found sequence first
+				if (seq_sym) {
+					str_seq.push_back(seq_sym);
+				}
+				// restart with unlinked symbol
+				seq_sym = key2sym.find(bin_table::make_char_symbol(*chr))->second;
+				seq_len = 0;
+			}
+			++seq_len;
+		}
+		// add last found sequence first
+		if (seq_sym) {
+			str_seq.push_back(seq_sym);
+		}
+		tab.add_string_sequence(str_seq, ext);
 	}
-	/**/
 }
 
 void
