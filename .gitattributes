@@ -4,7 +4,7 @@
 *.cpp text
 *.hpp text
 *.ico binary
-*.ipp text
+*.ipp text linguist-language=C++
 *.man text eol=crlf
 *.sln text eol=crlf
 *.txt text eol=crlf
