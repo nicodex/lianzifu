@@ -79,7 +79,11 @@ public:
 	typedef typename Traits::position position;
 	template<typename T>
 	struct rebind_allocator {
+	#if (__cplusplus >= 201103L)
+		typedef typename std::allocator_traits<allocator>::template rebind_alloc<T> other;
+	#else
 		typedef typename allocator::template rebind<T>::other other;
+	#endif
 	};
 
 	class symbol {
